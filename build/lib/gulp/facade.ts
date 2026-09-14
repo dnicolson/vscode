@@ -22,7 +22,6 @@ import gzip_ from 'gulp-gzip';
 import jsonEditor_ from 'gulp-json-editor';
 import mergeJson_ from 'gulp-merge-json';
 import azureStorage_ from 'gulp-azure-storage';
-import bom_ from 'gulp-bom';
 import buffer_ from 'gulp-buffer';
 import vinylZip_ from '@vscode/gulp-vinyl-zip';
 import svgmin_ from 'gulp-svgmin';
@@ -41,14 +40,17 @@ export const gzip = gzip_;
 export const jsonEditor = jsonEditor_;
 export const mergeJson = mergeJson_;
 export const azureStorage = azureStorage_;
-export const bom = bom_;
 export const buffer = buffer_;
 export const vinylZip = vinylZip_;
 export const svgmin = svgmin_;
 export const sort = sort_;
 
+// vinyl-fs 4 (gulp 5) defaults `encoding: 'utf8'`, which corrupts binary files; use raw Buffers like vinyl-fs 3 (gulp 4).
+const gulpSrc: typeof g.src = ((globs: string | string[], opts?: Record<string, unknown>) =>
+	g.src(globs, { encoding: false, ...opts } as never)) as typeof g.src;
+
 export const gulp = {
 	// Import task, sequence and parallel from "../lib/task"!
-	src: g.src,
+	src: gulpSrc,
 	dest: g.dest
 };

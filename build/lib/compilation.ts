@@ -5,7 +5,7 @@
 
 import es from 'event-stream';
 import fs from 'fs';
-import { gulp, bom, sourcemaps } from './gulp/facade.ts';
+import { gulp, sourcemaps } from './gulp/facade.ts';
 import path from 'path';
 import * as monacodts from './monaco-api.ts';
 import * as nls from './nls.ts';
@@ -77,9 +77,17 @@ export function createCompile(src: string, { build, emitError, transpileOnly, pr
 		const isRuntimeJs = (f: File) => f.path.endsWith('.js') && !f.path.includes('fixtures');
 		const noDeclarationsFilter = util.filter(data => !(/\.d\.ts$/.test(data.path)));
 
+		// Add a UTF-8 BOM when missing; raw Buffers keep an existing one (no double BOM).
+		const ensureUtf8Bom = es.through(function (f: File) {
+			if (f.isBuffer() && f.contents && !(f.contents[0] === 0xEF && f.contents[1] === 0xBB && f.contents[2] === 0xBF)) {
+				f.contents = Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), f.contents]);
+			}
+			this.push(f);
+		});
+
 		const input = es.through();
 		const output = input
-			.pipe(util.$if(isUtf8Test, bom())) // this is required to preserve BOM in test files that loose it otherwise
+			.pipe(util.$if(isUtf8Test, ensureUtf8Bom))
 			.pipe(util.$if(!build && isRuntimeJs, util.appendOwnPathSourceURL()))
 			.pipe(tsFilter)
 			.pipe(util.loadSourcemaps())
